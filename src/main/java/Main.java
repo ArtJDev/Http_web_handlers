@@ -12,7 +12,6 @@ public class Main {
             final Path filePath = Path.of(".", "public", request.getPath());
             final String mimeType = Files.probeContentType(filePath);
             final long length = Files.size(filePath);
-            System.out.println(request.getPath());
             out.write((
                     "HTTP/1.1 200 OK\r\n" +
                             "Content-Type: " + mimeType + "\r\n" +
@@ -46,11 +45,9 @@ public class Main {
         });
 
         server.addHandler("GET", "/spring.png", (request, out) -> {
-            System.out.println(request.getPath());
             final Path filePath = Path.of(".", "public", request.getPath());
             final String mimeType = Files.probeContentType(filePath);
             final long length = Files.size(filePath);
-            System.out.println(request.getPath());
             out.write((
                     "HTTP/1.1 200 OK\r\n" +
                             "Content-Type: " + mimeType + "\r\n" +
@@ -63,7 +60,6 @@ public class Main {
         });
 
         server.addHandler("POST", "/message", (request, out) -> {
-            System.out.println(request.getPath());
             out.write(("HTTP/1.1 200 OK\r\n" +
                     "Content-Length: 43\r\n" +
                     "Connection: close\r\n" +
