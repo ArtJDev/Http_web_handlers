@@ -12,8 +12,6 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
 public class Server {
-    private final String GET = "GET";
-    private final String POST = "POST";
     private final int THREADS = 64;
     private final List<String> allowedMethods = List.of("GET", "POST");
     private final Map<String, Map<String, Handler>> allHandlers;
