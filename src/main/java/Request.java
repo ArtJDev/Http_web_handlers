@@ -1,11 +1,13 @@
 import org.apache.http.NameValuePair;
 import org.apache.http.client.utils.URIBuilder;
+import org.apache.http.client.utils.URLEncodedUtils;
 
 import java.io.BufferedInputStream;
 import java.io.BufferedOutputStream;
 import java.io.IOException;
 import java.net.Socket;
 import java.net.URISyntaxException;
+import java.nio.charset.StandardCharsets;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Optional;
@@ -19,14 +21,16 @@ public class Request {
     private final List<String> headers;
     private final String body;
     private static List<NameValuePair> queryParams = null;
+    private static List<NameValuePair> postParams = null;
 
-    public Request(String method, String path, String protocol, List<String> headers, String body, List<NameValuePair> queryParams) {
+    public Request(String method, String path, String protocol, List<String> headers, String body, List<NameValuePair> queryParams, List<NameValuePair> postParams) {
         this.method = method;
         this.path = path;
         this.protocol = protocol;
         this.headers = headers;
         this.body = body;
         this.queryParams = queryParams;
+        this.postParams = postParams;
     }
 
     public List<NameValuePair> getQueryParams() {
@@ -42,6 +46,21 @@ public class Request {
         }
         return targetQueryParams;
     }
+
+    public List<NameValuePair> getPostParams() {
+        return postParams;
+    }
+
+    public List<NameValuePair> getPostParam(String name) {
+        List<NameValuePair> targetPostParams = null;
+        for (NameValuePair postParam : postParams) {
+            if (postParam.getName().equals(name)) {
+                targetPostParams.add(postParam);
+            }
+        }
+        return targetPostParams;
+    }
+
 
     public static Request parse(Socket socket) throws IOException, URISyntaxException {
         final var in = new BufferedInputStream(socket.getInputStream());
@@ -75,15 +94,16 @@ public class Request {
             badRequest(out);
             socket.close();
         }
-        URIBuilder builder = new URIBuilder(pathLine);
-        String path = builder.getPath();
+        URIBuilder pathParams = new URIBuilder(pathLine);
+        String path = pathParams.getPath();
         System.out.println(path);
 
-        queryParams = builder.getQueryParams();
+        queryParams = pathParams.getQueryParams();
         for (NameValuePair queryParam : queryParams) {
             System.out.println(queryParam);
         }
         final var protocol = requestLine[2];
+        System.out.println(protocol);
         // ищем заголовки
         final var headersDelimiter = new byte[]{'\r', '\n', '\r', '\n'};
         final var headersStart = requestLineEnd + requestLineDelimiter.length;
@@ -100,7 +120,6 @@ public class Request {
         final var headersBytes = in.readNBytes(headersEnd - headersStart);
         final var headers = Arrays.asList(new String(headersBytes).split("\r\n"));
         System.out.println(headers);
-
         // для GET тела нет
         final int length;
         final byte[] bodyBytes;
@@ -115,8 +134,15 @@ public class Request {
                 body = new String(bodyBytes);
                 System.out.println(body);
             }
+            final var contentType = getContentType(headers, "Content-Type");
+            if (contentType.equals("application/x-www-form-urlencoded")) {
+                postParams = URLEncodedUtils.parse(body, StandardCharsets.UTF_8);
+            }
+            for (NameValuePair postParam : postParams) {
+                System.out.println(postParam);
+            }
         }
-        return new Request(method, path, protocol, headers, body, queryParams);
+        return new Request(method, path, protocol, headers, body, queryParams, postParams);
     }
 
     private static Optional<String> extractHeader(List<String> headers, String header) {
@@ -125,6 +151,15 @@ public class Request {
                 .map(o -> o.substring(o.indexOf(" ")))
                 .map(String::trim)
                 .findFirst();
+    }
+
+    private static String getContentType(List<String> headers, String header) {
+        return headers.stream()
+                .filter(o -> o.startsWith(header))
+                .map(o -> o.substring(o.indexOf(" ")))
+                .map(String::trim)
+                .findFirst()
+                .get();
     }
 
     private static void badRequest(BufferedOutputStream out) throws IOException {
