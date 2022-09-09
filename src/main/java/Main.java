@@ -59,15 +59,34 @@ public class Main {
             out.flush();
         });
 
-        server.addHandler("POST", "/message", (request, out) -> {
-            out.write(("HTTP/1.1 200 OK\r\n" +
-                    "Content-Length: 43\r\n" +
-                    "Connection: close\r\n" +
-                    "Content-Type: text/html\r\n" +
-                    "\r\n" +
-                    "<html><head></head><body>POST</body></html>\n").getBytes());
+        server.addHandler("GET", "/forms.html", (request, out) -> {
+            final Path filePath = Path.of(".", "public", request.getPath());
+            final String mimeType = Files.probeContentType(filePath);
+            final long length = Files.size(filePath);
+            out.write((
+                    "HTTP/1.1 200 OK\r\n" +
+                            "Content-Type: " + mimeType + "\r\n" +
+                            "Content-Length: " + length + "\r\n" +
+                            "Connection: close\r\n" +
+                            "\r\n"
+            ).getBytes());
+            Files.copy(filePath, out);
             out.flush();
+        });
 
+        server.addHandler("POST", "/forms.html", (request, out) -> {
+            final Path filePath = Path.of(".", "public", request.getPath());
+            final String mimeType = Files.probeContentType(filePath);
+            final long length = Files.size(filePath);
+            out.write((
+                    "HTTP/1.1 200 OK\r\n" +
+                            "Content-Type: " + mimeType + "\r\n" +
+                            "Content-Length: " + length + "\r\n" +
+                            "Connection: close\r\n" +
+                            "\r\n"
+            ).getBytes());
+            Files.copy(filePath, out);
+            out.flush();
         });
 
         server.listen(PORT);
